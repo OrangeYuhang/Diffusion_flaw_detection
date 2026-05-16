@@ -1,0 +1,26 @@
+name: defectdiffu
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy>=1.23.5
+  - pip
+  - pip:
+    - torch==2.12.0.dev20260408+cu128
+    - torchaudio==2.11.0.dev20260407+cu128
+    - torchvision==0.27.0.dev20260407+cu128
+    - diffusers>=0.15.0
+    - timm>=0.6.12
+    - einops>=0.6.0
+    - ftfy>=6.1.1
+    - regex>=2022.10.31
+    - Pillow>=9.3.0
+    - tqdm>=4.64.1
+    - omegaconf>=2.1.0
+    - accelerate>=0.20.0
+    - opencv-python
+    - matplotlib
+    - seaborn
+    - gradio==6.12.0
+    - tensorboard>=2.15.0

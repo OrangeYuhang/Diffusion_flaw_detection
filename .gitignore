@@ -1,0 +1,34 @@
+# 数据集
+data/
+anodetection/data/
+
+# 模型权重 & 检查点
+checkpoint/
+model_para/
+VAE/
+DiT-256/
+*.pth
+*.pt
+*.safetensors
+*.bin
+
+# 点号开头的目录
+.*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 生成的图像
+img/
+
+# TensorBoard 日志
+runs/
+
+# 实验输出
+experiments/output/
+
+# IDE
+.idea/
+.vscode/

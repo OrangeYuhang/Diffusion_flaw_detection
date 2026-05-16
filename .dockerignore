@@ -1,0 +1,7 @@
+data/
+checkpoint/
+**/*.pt
+**/*.pth
+**/*.safetensors
+__pycache__
+*.pyc

@@ -248,7 +248,7 @@ def run_test(args):
                 np.array(Image.fromarray(
                     (mask_c[0].numpy() * 255).astype(np.uint8)).resize(
                         (256, 256), Image.NEAREST))).float() / 255.0
-            mask_c_up = mask_c_up.unsqueeze(0).repeat(3, 1, 1)  # 3ch for save
+            mask_c_up = mask_c_up.unsqueeze(0).repeat(3, 1, 1).to(DEVICE)  # 3ch for save
             rows_to_save.extend([img, mask, mask_c_up])
 
         grid = torch.stack(rows_to_save, dim=0)  # (9, 3, 256, 256)

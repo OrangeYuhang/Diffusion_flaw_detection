@@ -237,6 +237,7 @@ def main(args):
 
             drop_rat = 0.2
             if args.free==2:
+                y = list(y)
                 for i in range(len(y)):
                     c = y[i]
                     if c.split()[0] == 'good':
@@ -249,8 +250,8 @@ def main(args):
                         if rat < drop_rat:
                             y[i] = ('good ' + c.split()[1])
             else:
+                y = list(y)
                 for i in range(len(y)):
-                    y = list(y)
                     c = y[i]
                     if c.split()[0] != 'good':
                         rat_1 = torch.rand(1)

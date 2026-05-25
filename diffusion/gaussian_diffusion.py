@@ -272,10 +272,11 @@ class GaussianDiffusion:
         new_mask=None
         B, C = x.shape[:2]
         assert t.shape == (B,)
-        if model_kwargs == {}:
-            model_output = model(x, t, **model_kwargs)
+        out = model(x, t, **model_kwargs)
+        if isinstance(out, tuple):
+            model_output, new_mask, _ = out
         else:
-            model_output, new_mask, _ = model(x, t, **model_kwargs)
+            model_output, new_mask = out, None
         if isinstance(model_output, tuple):
             model_output, extra = model_output
         else:

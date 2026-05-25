@@ -134,7 +134,7 @@ class FeatureConsistencyLoss(nn.Module):
         diff = weighted_feat - self.normal_mean.unsqueeze(0)  # (B, C_f)
         # 二次型: diffᵀ × precision × diff，逐个样本计算
         # (B, 1, C_f) @ (C_f, C_f) × (B, C_f, 1) → (B,)
-        quad = (diff.unsqueeze(1) @ self.normal_precision * diff.unsqueeze(2)).sum(dim=[1, 2])
+        quad = (diff.unsqueeze(1) @ self.normal_precision @ diff.unsqueeze(2)).squeeze(-1).squeeze(-1)
         # clamp: 精度矩阵数值误差可能导致二次型为微小负数
         mahalanobis = torch.sqrt(quad.clamp(min=0)).mean()
 

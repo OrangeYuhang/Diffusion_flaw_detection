@@ -322,7 +322,7 @@ class DiT(nn.Module):
         att_map = torch.cat(att_map, dim=-1)
         att_mask = self.adapt_mask(att_map)
         
-        return x, att_mask, loss_att.resize(x.shape[0], x.shape[2]//2, x.shape[3]//2, 16).mean(dim=-1)
+        return x, att_mask, loss_att.reshape(x.shape[0], x.shape[2]//2, x.shape[3]//2, 16).mean(dim=-1)
     
     def forward_free_2(self, x, t, y, mask_temp=None):
         """

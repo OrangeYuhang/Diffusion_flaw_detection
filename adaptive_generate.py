@@ -22,7 +22,6 @@ from collections import defaultdict
 
 import torch
 from torchvision.utils import save_image
-from PIL import Image
 
 from models_add_cross_concate import DiT
 from diffusion import create_diffusion

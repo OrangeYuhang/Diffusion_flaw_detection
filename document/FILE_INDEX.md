@@ -15,19 +15,22 @@ DefectDiffu-main/
 ├── 📁 VAE/                # Stable Diffusion VAE 权重（sd-vae-ft-mse）
 ├── 📁 data/mvtec/         # MVTec AD 数据集
 ├── 📁 checkpoint/         # 训练中间检查点
-├── 📁 model_para/         # 已训练模型参数（最终/推理用检查点）
+├── 📁 model_para/         # 已训练模型参数（生成/推理用检查点）
 ├── 📁 img/                # 生成图像输出目录
 ├── 📁 document/           # 文档集中目录（论文、说明、实验设计）
+├── 📁 runs/               # TensorBoard 事件日志
+├── 📁 anodetection/       # PatchCore 异常检测管线（训练/评估/实验）
 ├── 📁 __pycache__/        # Python 字节码缓存（自动生成，可忽略）
 ├── 📁 .gradio/            # Gradio HTTPS 证书（自动生成，可忽略）
 ├── 📁 .vscode/            # VS Code 编辑器配置
 │
 ├── 📄 *.py                # Python 源码（详见下方分类）
+├── 📄 *.csv               # 训练损失日志
 ├── 📄 *.yml               # Conda 环境配置
 ├── 📄 Dockerfile          # Docker 镜像构建文件
 ├── 📄 .dockerignore       # Docker 构建忽略规则
 ├── 📄 .cmd                # 常用命令速查
-└── 📄 diffusion.zip       # diffusion 目录压缩包（分发用）
+└── 📄 .gitignore          # Git 忽略规则
 ```
 
 ---
@@ -39,7 +42,7 @@ DefectDiffu-main/
 | 文件 | 作用 |
 |------|------|
 | `__init__.py` | 暴露 `create_diffusion()` 工厂函数，创建配置好的 `SpacedDiffusion` 实例 |
-| `gaussian_diffusion.py` | **核心模块**。`GaussianDiffusion` 类实现 DDPM：前向扩散 q(x_t\|x_0)、反向采样 p(x_{t-1}\|x_t)、训练 loss（含改进的 fg/bg 分离 + Dice mask loss） |
+| `gaussian_diffusion.py` | **核心模块**。`GaussianDiffusion` 类实现 DDPM：前向扩散 q(x_t\|x_0)、反向采样 p(x_{t-1}\|x_t)、训练 loss（含 fg/bg 分离 + Dice mask loss，mask 输出经 tanh 约束 + min-max 归一化） |
 | `diffusion_utils.py` | 工具函数：KL 散度、高斯 log-likelihood、标准正态 CDF 近似 |
 | `respace.py` | `SpacedDiffusion` 类：支持 respaced timesteps（如 1000 步 → 50 步），通过 `_WrappedModel` 做 timestep 映射 |
 | `timestep_sampler.py` | 训练时 timestep 采样策略：`UniformSampler`（均匀）、`LossSecondMomentResampler`（按 loss 加权） |
@@ -79,19 +82,23 @@ DefectDiffu-main/
 
 ### `checkpoint/` — 训练中间检查点
 
-存放训练过程中周期性保存的检查点（`model_*.pth`），训练完成后可将最终检查点移入 `model_para/`。
+存放训练过程中周期性保存的检查点（`model_*.pth`、`model_mask_cond_*.pth`），训练完成后可将最终检查点移入 `model_para/`。
 
 ### `model_para/` — 已训练模型参数
 
 | 文件 | 作用 |
 |------|------|
-| `model_1500.pth` | 训练 1500 epoch 的最终检查点，供推理使用 |
+| `model_400_plus.pth` | 标准 DiT 检查点（400 epoch，增强版） |
+| `model_1500_prime.pth` | 标准 DiT 最终检查点（1500 epoch） |
+| `model_mask_cond_s1_100.pth` | DiTMaskConditioned Stage 1 检查点（冻结基类，仅训练新模块，100 epoch） |
+| `model_mask_cond_s2_200.pth` | DiTMaskConditioned Stage 2 检查点（全参数微调，200 epoch） |
 
 ### `img/` — 生成输出
 
 | 文件 | 作用 |
 |------|------|
 | `fig 2 architecture.jpg` | 论文中的架构图 |
+| `architecture_comparison.png` | DiT vs DiTMaskConditioned 架构对比图 |
 
 ### `document/` — 文档集中目录
 
@@ -99,12 +106,28 @@ DefectDiffu-main/
 |------|------|
 | `FILE_INDEX.md` | 本文件 — 项目文件与目录索引 |
 | `INNOVATIONS.md` | 优化与创新技术说明。原模型不足分析、改进原理、解决的问题 |
-| `实验流程.md` | 实验设计框架。5 组实验方案（few-shot 消融、合成样本数量、传统增强对比等） |
+| `MODEL_ARCHITECTURE.md` | 模型架构详解。DiT 和 DiTMaskConditioned 的完整架构说明，含数据流、维度变换、代码引用 |
+| `TRAINING_GUIDE.md` | 训练指南。标准 DiT / DiTMaskConditioned / 一致性蒸馏的完整训练流程、参数说明、调优建议 |
+| `实验执行方案.md` | 实验执行方案。实验设计框架、方案对比、评估指标 |
+| `工作流程.md` | 完整端到端工作流程：四阶段路线图、依赖关系、命令速查、时间线、交付物清单 |
 | `defectdiffu.pdf` | 论文 PDF（ECCV 2024, Few-shot Defect Image Generation based on Consistency Modeling） |
 | `defectdiffu-mono.pdf` | 论文 PDF（单色版） |
 | `defectdiffu-dual.pdf` | 论文 PDF（双色版） |
 | `扩散检瑕-陈宇航(1).docx` | 扩散检瑕相关文档 |
-| `工作流程.md` | **新增**。完整端到端工作流程：四阶段路线图、依赖关系、命令、时间线、交付物清单 |
+
+### `runs/` — TensorBoard 事件日志
+
+| 文件 | 作用 |
+|------|------|
+| `train/events.out.tfevents.*` | 标准 DiT 训练的 TensorBoard 标量日志（loss、vb、mse、mask_mse、mask_dice、att_align） |
+
+### `anodetection/` — PatchCore 异常检测
+
+| 路径 | 作用 |
+|------|------|
+| `data/mvtec/` | 为 PatchCore 准备的数据集（train/good + 生成缺陷 + test + ground_truth） |
+| `experiments/run_experiments.py` | 实验运行脚本（few-shot 消融、合成样本数量等） |
+| `experiments/output/` | 实验结果输出目录 |
 
 ### `.vscode/` — 编辑器配置
 
@@ -126,26 +149,26 @@ DefectDiffu-main/
 
 | 文件 | 作用 |
 |------|------|
-| `models_add_cross_concate.py` | **主模型文件**。`DiT` 类：28 层 DiT-XL/2，含 `CrossAttention`、`Cross_Norm`、`temp_Adaptive_Mask` 掩码解码器。提供 3 种前向路径：`forward`（训练）、`forward_free_2`（2 分支 CFG）、`forward_with_cfg_2`（2 分支 CFG 引导）、`forward_free_3`（3 分支）、`forward_with_cfg_3`（3 分支 CFG 引导）。已改为全通道（4ch）CFG |
-| `models_mask_condition.py` | **新增**。`DiTMaskConditioned`：继承自 DiT，增加 `MaskEncoder` 实现显式掩码条件注入，支持推理时用随机掩码控制缺陷位置。含 `generate_random_mask()` 工具 |
+| `models_add_cross_concate.py` | **主模型文件**。`DiT` 类：28 层 DiT-XL/2，含 `CrossAttention`、`Cross_Norm`、`temp_Adaptive_Mask` 掩码解码器（tanh 输出约束）。提供 3 种前向路径：`forward`（训练）、`forward_with_cfg_2`（2 分支 CFG）、`forward_with_cfg_3`（3 分支 CFG）。全通道（4ch）CFG |
+| `models_mask_condition.py` | **新增**。`DiTMaskConditioned`：继承自 DiT，增加 `MaskEncoder` + `mask_fusion`×28（零初始化）+ `mask_to_tokens`，实现显式掩码条件注入。支持两阶段训练（ControlNet 风格）。含 `generate_random_mask()` 工具 |
 | `autoencoder.py` | VAE 相关模块（`Encoder`、`Decoder`、`FrozenAutoencoderKL`、`LinearAttention` 等）。实际训练/推理使用的是 `diffusers.models.AutoencoderKL` |
 
 ### 训练
 
 | 文件 | 作用 |
 |------|------|
-| `train.py` | **主训练脚本**。`Dataset_self` 类：加载 MVTec 数据（缺陷 + 正常），预处理图像和掩码。训练循环：CLIP 文本编码 → VAE 潜空间编码 → DiT 去噪 → fg/bg 分离 loss + Dice mask loss。支持 `--good_ratio`（正常样本比例）、`--feature_loss`（特征空间一致性）、`--free`（CFG 分支策略） |
-| `train.bak.py` | 更早版本的训练脚本备份 |
-| `feature_loss.py` | **新增**。`PatchCoreFeatureExtractor`：WideResNet-50 layer2+layer3 特征提取。`compute_normal_statistics()`：预计算正常样本特征均值与协方差逆矩阵。`FeatureConsistencyLoss`：Mahalanobis 距离 loss，约束非缺陷区域特征分布。`build_feature_loss()`：一键构建函数 |
-| `train_mask_condition.py` | **新增**。掩码条件 DiT 训练脚本。基于 ground truth 掩码训练 `DiTMaskConditioned`，使模型学会在指定位置生成缺陷。复用 fg/bg 分离 loss、Dice mask loss、正常样本训练、特征一致性 loss。输出 `checkpoint/model_mask_cond_*.pth` |
-| `consistency_distill.py` | **新增**。一致性蒸馏训练：`consistency_loss()` + `boundary_loss_fn()` + `fast_sample()` 4 步快速采样器。`MVTecDistillDataset` 轻量数据集类 |
+| `train.py` | **标准 DiT 训练脚本**。`Dataset_self` 类：加载 MVTec 数据（缺陷 + 正常），预处理图像和掩码。支持 `--bf16` AMP、`--good_ratio`、`--feature_loss`、`--free`（CFG 分支策略）。每 epoch 记录损失到 `loss_log.csv`。检查点仅保存 `model.state_dict()` |
+| `train_mask_condition.py` | **掩码条件 DiT 训练脚本**。基于 ground truth 掩码训练 `DiTMaskConditioned`。支持 `--stage 1/2` 两阶段训练（Stage 1 冻结基类 DiT 仅训练新模块 lr=1e-4，Stage 2 全参数微调 lr=2e-5）。每 epoch 记录损失到 `loss_log_mask_cond.csv` |
+| `feature_loss.py` | **新增**。`PatchCoreFeatureExtractor`：WideResNet-50 layer2+layer3 特征提取。`compute_normal_statistics()`：预计算正常样本特征均值与协方差逆矩阵。`FeatureConsistencyLoss`：Mahalanobis 距离 loss，约束非缺陷区域特征。`build_feature_loss()`：一键构建函数 |
+| `consistency_distill.py` | **新增**。一致性蒸馏训练：`consistency_loss()` + `boundary_loss_fn()` + `fast_sample()` 4 步快速采样器。`MVTecDistillDataset` 仅加载 `train/good` |
 
 ### 推理/生成
 
 | 文件 | 作用 |
 |------|------|
 | `test.py` | **主测试脚本**。遍历 MVTec 所有 class × defect 组合，为每个类别生成图像 + 掩码。使用 `binarize_tensor_iterative()` 对掩码做自适应阈值二值化。输出到 `./img/` |
-| `test_gen.py` | 简化版单图生成脚本。从命令行指定的文本 prompt 生成一张缺陷图像。适合快速调试 |
+| `test_gen.py` | 简化版单图生成脚本。从命令行指定的文本 prompt 生成一张缺陷图像 |
+| `test_mask_cond_control.py` | 掩码条件控制测试脚本。测试 `DiTMaskConditioned` 在不同掩码输入下的生成效果 |
 | `generate_diverse.py` | **新增**。多轴多样性生成：CFG scale sweep（0.5–4.0）、noise scale sweep（0.7–1.8）、seed variation、cross-product grid。适用于系统性生成多样化训练数据 |
 | `app.py` | Gradio Web UI。支持标准 DiT 与掩码条件 DiT 双模式。交互式界面：缺陷类型 + 产品类别 + CFG scale + 掩码位置控制（斑点/线条/噪声/手绘），实时生成图像和掩码 |
 
@@ -153,12 +176,12 @@ DefectDiffu-main/
 
 | 文件 | 作用 |
 |------|------|
-| `prepare_dataset.py` | 数据集准备脚本。复制 MVTec 原始正常样本到 `train/good/`；复制测试集、ground_truth；用 DefectDiffu 生成合成缺陷样本存入 `train/bad/`。输出适配 anomalib 的目录结构 |
-| `adaptive_generate.py` | **新增**。闭环反馈自适应生成。迭代循环：生成样本 → PatchCore 评估 → 按 AUROC 反比例分配预算 → 下一轮生成。`allocate_budget()` 实现自适应策略 |
+| `prepare_dataset.py` | 数据集准备脚本。复制 MVTec 原始正常样本；复制测试集、ground_truth；用 DefectDiffu 按 CFG 强度分级生成合成缺陷样本。输出适配 anomalib 的目录结构 |
+| `adaptive_generate.py` | **新增**。闭环反馈自适应生成。迭代循环：生成样本 → PatchCore 评估 → 按 AUROC 反比例分配预算 → 下一轮生成 |
 
 ---
 
-## 四、配置文件
+## 四、配置文件与日志
 
 | 文件 | 作用 |
 |------|------|
@@ -167,38 +190,25 @@ DefectDiffu-main/
 | `envRTX5070_linux.yml` | RTX 5070 Linux 环境配置（精简版） |
 | `Dockerfile` | Docker 镜像构建。基于 `pytorch/pytorch:2.4.0-cuda12.4`，安装依赖、挂载数据/模型目录 |
 | `.dockerignore` | Docker 构建排除：`data/`、`checkpoint/`、`*.pt`、`*.pth`、`*.safetensors`、`__pycache__`、`*.pyc` |
+| `.gitignore` | Git 忽略规则 |
 | `.vscode/settings.json` | VS Code：指定 Conda 为 Python 环境管理器 |
-| `.cmd` | 常用命令速查（训练/测试/生成/蒸馏/Docker/环境安装） |
-| `diffusion.zip` | diffusion 目录的压缩包（方便分发和部署） |
-
----
-
-## 五、文档（均位于 `document/` 目录）
-
-| 文件 | 作用 |
-|------|------|
-| `FILE_INDEX.md` | 本文件 — 项目文件与目录索引 |
-| `INNOVATIONS.md` | 优化与创新技术说明。原模型不足分析、改进原理、解决的问题、公式与代码片段 |
-| `实验流程.md` | 实验设计框架。5 组实验方案（few-shot 消融、合成样本数量、传统增强对比、长尾覆盖、质量消融） |
-| `defectdiffu.pdf` | 论文 PDF（ECCV 2024, Few-shot Defect Image Generation based on Consistency Modeling） |
-| `defectdiffu-mono.pdf` | 论文 PDF（单色版） |
-| `defectdiffu-dual.pdf` | 论文 PDF（双色版） |
-| `扩散检瑕-陈宇航(1).docx` | 扩散检瑕相关文档 |
-| `工作流程.md` | 完整端到端工作流程：四阶段路线图、依赖关系、命令速查、时间线、交付物清单 |
+| `.cmd` | 常用命令速查（训练/测试/生成/蒸馏/两阶段训练/Docker/环境安装） |
+| `loss_log.csv` | 标准 DiT 训练损失日志（epoch, loss, vb, mse, mask_mse, mask_dice, att_align, feat） |
+| `loss_log_mask_cond.csv` | DiTMaskConditioned 训练损失日志（同上格式） |
+| `README_defectdiffu.md` | 根目录项目 README。论文简介、预训练模型下载链接、训练/测试命令、引用格式 |
+| `CLAUDE.md` | Claude Code 指导文件。项目概览、命令、架构说明、环境配置、关键细节、代码风格准则 |
 
 此外：
-| `README.md` | 根目录官方 README。论文简介、预训练模型下载链接、训练/测试命令、引用格式 |
-| `CLAUDE.md` | 根目录 Claude Code 指导文件。项目概览、命令、架构说明、环境配置、关键细节 |
 | `VAE/README.md` | VAE 附带说明文档（sd-vae-ft-mse 训练细节与评估指标） |
 
 ---
 
-## 六、依赖关系图
+## 五、依赖关系图
 
 ```
-训练流程:
-  train.py / train_mask_condition.py
-  ├── models_add_cross_concate.py (DiT 模型) 或 models_mask_condition.py (DiTMaskConditioned)
+训练流程（标准 DiT）:
+  train.py
+  ├── models_add_cross_concate.py (DiT 模型)
   ├── diffusion/ (DDPM 扩散过程 + 训练 loss)
   ├── feature_loss.py ─── 可选：PatchCore 对齐 loss
   ├── clip/ (CLIP 文本编码)
@@ -207,30 +217,40 @@ DefectDiffu-main/
   ├── VAE/ (SD VAE 权重)
   └── data/mvtec/ (训练数据 + ground_truth 掩码)
 
+训练流程（掩码条件 DiT）:
+  train_mask_condition.py
+  ├── models_mask_condition.py (DiTMaskConditioned)
+  │   └── models_add_cross_concate.py (基类 DiT)
+  ├── diffusion/ (DDPM 扩散过程 + 训练 loss)
+  ├── feature_loss.py ─── 可选
+  ├── clip/ (CLIP 文本编码)
+  ├── DiT-256/DiT-XL-2-256x256.pt (预训练权重 → 加载到基类)
+  ├── VAE/ (SD VAE 权重)
+  └── data/mvtec/ (训练数据 + ground_truth 掩码 → mask_cond)
+
 生成流程:
-  test.py / test_gen.py / generate_diverse.py / app.py
+  test.py / test_gen.py / generate_diverse.py / test_mask_cond_control.py / app.py
   ├── models_add_cross_concate.py
   ├── models_mask_condition.py ─── app.py 掩码控制模式
   ├── diffusion/ (采样用)
   ├── clip/
-  ├── checkpoint/ 或 model_para/ (微调后的检查点)
+  ├── model_para/ (微调后的检查点)
   └── VAE/
 
 闭环流程:
   adaptive_generate.py
   ├── models_add_cross_concate.py (生成)
-  ├── model_para/ 或 checkpoint/ (检查点)
-  └── anomalib/PatchCore (外部依赖，检测评估)
+  └── anodetection/ (PatchCore 检测评估 + 实验)
 
 蒸馏流程:
   consistency_distill.py
   ├── models_add_cross_concate.py (教师 + 学生)
   ├── diffusion/
   ├── VAE/
-  └── model_para/ 或 checkpoint/ (教师权重)
+  └── model_para/ (教师权重)
 
 位置解耦:
   models_mask_condition.py
   ├── models_add_cross_concate.py (基类 DiT)
-  └── 新增 MaskEncoder + DiTMaskConditioned
+  └── 新增 MaskEncoder + mask_fusion + mask_to_tokens → DiTMaskConditioned
 ```

@@ -30,7 +30,10 @@ def load_standard_model(ckpt_path, vae_path):
     model = DiT(depth=28, hidden_size=1152, patch_size=2, num_heads=16,
                 input_size=LATENT_SIZE, num_classes=1000).to(DEVICE)
     state_dict = torch.load(ckpt_path, map_location=DEVICE)
-    model.load_state_dict(state_dict['model_state_dict'])
+    if isinstance(state_dict, dict) and 'model_state_dict' in state_dict:
+        state_dict = state_dict['model_state_dict']
+    model.load_state_dict(state_dict)
+    model.float()  # 确保全精度，避免 BF16 训练的 checkpoint 混入 half 精度
     model.eval()
     diffusion = create_diffusion(timestep_respacing="50")
     vae = AutoencoderKL.from_pretrained(vae_path).to(DEVICE)
@@ -45,9 +48,12 @@ def load_mask_model(ckpt_path, vae_path):
         depth=28, hidden_size=1152, patch_size=2, num_heads=16,
         input_size=LATENT_SIZE, num_classes=1000).to(DEVICE)
     state_dict = torch.load(ckpt_path, map_location=DEVICE)
+    if isinstance(state_dict, dict) and 'model_state_dict' in state_dict:
+        state_dict = state_dict['model_state_dict']
     # DiTMaskConditioned 比 DiT 多了 mask_encoder / mask_fusion / mask_to_tokens
     # 如果加载的是标准 DiT 的 ckpt，缺失的 key 用默认初始化
-    model.load_state_dict(state_dict['model_state_dict'], strict=False)
+    model.load_state_dict(state_dict, strict=False)
+    model.float()  # 确保全精度，避免 BF16 训练的 checkpoint 混入 half 精度
     model.eval()
     diffusion = create_diffusion(timestep_respacing="50")
     vae = AutoencoderKL.from_pretrained(vae_path).to(DEVICE)
@@ -80,7 +86,7 @@ def encode_prompts(model_clip, defect_text, product_text, num_img=1):
     embeds = {}
     for key, text in tokens.items():
         tok = clip.tokenize([text] * num_img).to(DEVICE)
-        e = model_clip.encode_text(tok)
+        e = model_clip.encode_text(tok).float()
         embeds[key] = e / e.norm(dim=-1, keepdim=True)
     return embeds
 
@@ -163,7 +169,7 @@ def extract_severity_cfg(defect_text, model_clip=None):
         try:
             full_prompt = f"a photo of {clean}"
             tok = clip.tokenize([full_prompt] + [a[0] for a in SEVERITY_ANCHORS_CFG]).to(DEVICE)
-            embeds = model_clip.encode_text(tok)
+            embeds = model_clip.encode_text(tok).float()
             embeds = embeds / embeds.norm(dim=-1, keepdim=True)
             user_emb = embeds[0:1]
             anchor_embs = embeds[1:]
@@ -200,24 +206,22 @@ def preprocess_mask(mask_input, mask_mode):
     if mask_input is None:
         return None
 
+    # gr.ImageEditor 返回 dict {"background": ..., "layers": [...], "composite": ...}
+    if isinstance(mask_input, dict):
+        mask_input = mask_input.get("composite", mask_input.get("background"))
+
     if isinstance(mask_input, np.ndarray):
-        # gr.Image 返回 H×W 或 H×W×C 的 numpy
         if mask_input.ndim == 3:
-            # 取平均变灰度，或取 R 通道
             mask_gray = mask_input[:, :, 0] if mask_input.shape[2] >= 1 else mask_input.mean(axis=2)
         else:
             mask_gray = mask_input
 
-        # 归一化到 [0, 1]
         mask_gray = mask_gray.astype(np.float32) / 255.0
-        # 二值化
         mask_bin = (mask_gray > 0.3).astype(np.float32)
 
-        # Resize 到 32×32（潜空间尺寸）
         mask_pil = Image.fromarray((mask_bin * 255).astype(np.uint8))
         mask_pil = mask_pil.resize((LATENT_SIZE, LATENT_SIZE), Image.BILINEAR)
         mask_tensor = torch.from_numpy(np.array(mask_pil)).float() / 255.0
-        # 转为 (1, 1, 32, 32)
         mask_tensor = mask_tensor.unsqueeze(0).unsqueeze(0).to(DEVICE)
         return mask_tensor
 
@@ -244,12 +248,15 @@ def generate(defect_text, product_text, cfg_scale,
     y = [y_defect_class, y_good_class]
 
     if use_mask_model:
-        # 掩码条件路径
+        # 掩码条件路径（通过扩散采样循环迭代去噪）
         mask_cond = preprocess_mask(mask_input, mask_mode)
+        if mask_cond is not None:
+            mask_cond = mask_cond.to(dtype=next(model.parameters()).dtype)
         model_kwargs = dict(y=y, cfg_scale=cfg_scale, mask_cond=mask_cond)
-        samples, cross, _ = model.forward_with_cfg_mask(
-            z, torch.zeros(z.shape[0], device=DEVICE, dtype=torch.long),
-            y, cfg_scale, mask_cond)
+        samples, cross = diffusion.p_sample_loop(
+            model.forward_with_cfg_mask, z.shape, z,
+            clip_denoised=False, model_kwargs=model_kwargs,
+            progress=False, device=DEVICE)
     else:
         # 标准 CFG 路径
         model_kwargs = dict(y=y, cfg_scale=cfg_scale)
@@ -308,7 +315,8 @@ def create_ui():
     model_state = {"model": None, "diffusion": None, "vae": None,
                    "model_clip": None, "use_mask": False}
 
-    def on_load_model(ckpt_path, vae_path, model_type):
+    def on_load_model(ckpt_path, model_type):
+        vae_path = "./VAE"
         if model_type == "标准 DiT（无掩码控制）":
             m, d, v, c = load_standard_model(ckpt_path, vae_path)
             model_state.update(model=m, diffusion=d, vae=v, model_clip=c, use_mask=False)
@@ -317,6 +325,13 @@ def create_ui():
             m, d, v, c = load_mask_model(ckpt_path, vae_path)
             model_state.update(model=m, diffusion=d, vae=v, model_clip=c, use_mask=True)
             return "✅ 掩码条件 DiT 加载成功", gr.update(visible=True)
+
+    def on_model_type_change(model_type):
+        """模型类型切换时自动更新 checkpoint 路径"""
+        if model_type == "标准 DiT（无掩码控制）":
+            return gr.update(value="./model_para/model_400_plus.pth")
+        else:
+            return gr.update(value="./model_para/model_mask_cond_s2_200.pth")
 
     def on_defect_change(defect_text):
         """缺陷文本变化时自动检测强度并更新 CFG 推荐值"""
@@ -370,11 +385,8 @@ def create_ui():
 
         # ---- 模型加载区 ----
         with gr.Accordion("⚙️ 模型配置", open=True):
-            with gr.Row():
-                ckpt_input = gr.Textbox(
-                    label="检查点路径", value="./model_para/model_1500_prime.pth")
-                vae_input = gr.Textbox(
-                    label="VAE 路径", value="./VAE")
+            ckpt_input = gr.Textbox(
+                label="检查点路径", value="./model_para/model_400_plus.pth")
             with gr.Row():
                 model_type = gr.Radio(
                     label="模型类型",
@@ -398,11 +410,14 @@ def create_ui():
                 ],
                 value="none")
 
-            mask_image = gr.Image(
+            mask_image = gr.ImageEditor(
                 label="绘制或上传掩码（白色=缺陷位置，黑色=背景）",
                 image_mode="L",
-                sources=["upload"],
                 type="numpy",
+                brush=gr.Brush(colors=["#FFFFFF"], default_size=15),
+                canvas_size=(256, 256),
+                fixed_canvas=True,
+                layers=False,
                 value=generate_blank_canvas(),
                 visible=False)
 
@@ -459,8 +474,14 @@ def create_ui():
         # ---- 事件绑定 ----
         load_btn.click(
             on_load_model,
-            inputs=[ckpt_input, vae_input, model_type],
+            inputs=[ckpt_input, model_type],
             outputs=[load_status, mask_panel])
+
+        # 模型类型切换 → 自动更新 checkpoint 路径
+        model_type.change(
+            on_model_type_change,
+            inputs=[model_type],
+            outputs=[ckpt_input])
 
         mask_mode.change(
             on_mask_mode_change,

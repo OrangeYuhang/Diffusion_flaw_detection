@@ -101,21 +101,19 @@ class DiTMaskConditioned(DiT):
             return self.forward_with_mask(x, t, y, mask_cond)
         return super().forward(x, t, y)
 
-    def _apply_mask_condition(self, c_base, mask, block_idx):
+    def _apply_mask_condition(self, c_base, mask_global, block_idx):
         """
         将掩码条件融合到基础条件向量中。
         参数:
             c_base: (B, D) 来自时间 + 文本的基础条件
-            mask: (B, 1, H, W) 空间掩码
+            mask_global: (B, D) 预计算的掩码全局特征
             block_idx: 当前 DiT 块的索引
         返回:
             c_fused: (B, 6*D) 融合后的 adaLN 参数
         """
-        mask_global, mask_spatial = self.mask_encoder(mask)
-        # 拼接并融合
         c_combined = torch.cat([c_base, mask_global], dim=-1)
         adaLN_params = self.mask_fusion[block_idx](c_combined)
-        return adaLN_params, mask_spatial
+        return adaLN_params
 
     def forward_with_mask(self, x, t, y, mask_cond=None):
         """
@@ -131,9 +129,9 @@ class DiTMaskConditioned(DiT):
 
         x = self.x_embedder(x) + self.pos_embed
         t_emb = self.t_embedder(t)
-        y_defect = self.y_embedders(y[0])
-        y_class = self.y_embedders(y[1])
-        y_all = self.y_embedders(y[2])
+        y_defect = self.y_embedders(y[0].float())
+        y_class = self.y_embedders(y[1].float())
+        y_all = self.y_embedders(y[2].float())
         att_map = []
         loss_att = 0
 
@@ -149,7 +147,7 @@ class DiTMaskConditioned(DiT):
             block = self.blocks[i]
             if i < 10:
                 c_base = t_emb + y_class
-                adaLN, _ = self._apply_mask_condition(c_base, mask_cond, i)
+                adaLN = self._apply_mask_condition(c_base, mask_global, i)
                 shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = adaLN.chunk(6, dim=1)
                 x = x + gate_msa.unsqueeze(1) * block.attn(
                     modulate(block.norm1(x), shift_msa, scale_msa))
@@ -158,7 +156,7 @@ class DiTMaskConditioned(DiT):
             elif i < 20:
                 cross = self.cross_defect[i - 10]
                 c_base = t_emb + y_defect
-                adaLN, _ = self._apply_mask_condition(c_base, mask_cond, i)
+                adaLN = self._apply_mask_condition(c_base, mask_global, i)
                 shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = adaLN.chunk(6, dim=1)
                 x = x + gate_msa.unsqueeze(1) * block.attn(
                     modulate(block.norm1(x), shift_msa, scale_msa))
@@ -170,7 +168,7 @@ class DiTMaskConditioned(DiT):
                     modulate(block.norm2(x), shift_mlp, scale_mlp))
             else:
                 c_base = t_emb + y_all
-                adaLN, _ = self._apply_mask_condition(c_base, mask_cond, i)
+                adaLN = self._apply_mask_condition(c_base, mask_global, i)
                 shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = adaLN.chunk(6, dim=1)
                 x = x + gate_msa.unsqueeze(1) * block.attn(
                     modulate(block.norm1(x), shift_msa, scale_msa))

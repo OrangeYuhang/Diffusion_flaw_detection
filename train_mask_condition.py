@@ -262,7 +262,7 @@ def main(args):
     print(f'===== 掩码条件 DiT Stage {args.stage} ({amp_enabled}, {lr_str}) =====')
     losses = []
 
-    csv_file = open('loss_log_mask_cond.csv', 'w', newline='')
+    csv_file = open(f'loss_log_mask_cond_s{args.stage}.csv', 'w', newline='')
     csv_writer = csv.writer(csv_file)
     csv_header = ['epoch', 'loss', 'vb', 'mse', 'mask_mse', 'mask_dice', 'att_align']
     if feature_loss_fn is not None:
@@ -283,6 +283,7 @@ def main(args):
             # —— CFG 文本 dropout（与 train.py 相同） ——
             drop_rat = 0.2
             if args.free == 2:
+                y = list(y)
                 for i in range(len(y)):
                     c = y[i]
                     if c.split()[0] == 'good':
@@ -292,8 +293,8 @@ def main(args):
                         if torch.rand(1) < drop_rat:
                             y[i] = 'good ' + c.split()[1]
             else:
+                y = list(y)
                 for i in range(len(y)):
-                    y = list(y)
                     c = y[i]
                     if c.split()[0] != 'good':
                         if torch.rand(1) < drop_rat:
@@ -400,7 +401,7 @@ def main(args):
         writer.close()
 
     csv_file.close()
-    print("损失日志已保存至 loss_log_mask_cond.csv")
+    print(f"损失日志已保存至 loss_log_mask_cond_s{args.stage}.csv")
 
     # 损失曲线
     fig = plt.figure()

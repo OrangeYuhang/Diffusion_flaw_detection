@@ -67,8 +67,10 @@ def seed_everything(seed=42):
 
 
 def get_class_from_filename(fname):
-    parts = fname.replace('.png', '').replace('.jpg', '').split('_')
-    return parts[0] if parts else None
+    for cls in MVTEC_CLASSES:
+        if fname.startswith(cls + '_'):
+            return cls
+    return None
 
 
 # ============================================================
@@ -184,7 +186,9 @@ def copy_synthetic_dir(exp_dir, file_index, synthetic_limit=None,
 
 
 def merge_synthetic_to_train_bad(exp_dir):
-    """将 synthetic/ 合并到各类的 train/bad/，供监督模型使用。"""
+    """将 synthetic/ 合并到各类的 train/bad/，供监督模型使用。
+    同时为合成图像创建零值 mask 文件，以避免 anomalib 读取 mask_path=None 崩溃。"""
+    from PIL import Image
     exp_dir = Path(exp_dir)
     syn_root = exp_dir / 'synthetic'
     if not syn_root.is_dir():
@@ -195,9 +199,23 @@ def merge_synthetic_to_train_bad(exp_dir):
         cls = cls_dir.name
         bad_dst = exp_dir / cls / 'train' / 'bad'
         bad_dst.mkdir(parents=True, exist_ok=True)
+        # 确保 ground_truth/bad/ 目录也存在
+        mask_dst = exp_dir / cls / 'ground_truth' / 'bad'
+        mask_dst.mkdir(parents=True, exist_ok=True)
         for f in cls_dir.iterdir():
             if f.is_file():
                 shutil.copy2(f, bad_dst / f.name)
+                # 为合成缺陷创建零值 mask（与图像同尺寸）
+                try:
+                    img = Image.open(f)
+                    w, h = img.size
+                    # 零值 mask = 无缺陷区域标注（仅用于避免崩溃，
+                    # 模型仍通过 label_index 学习这些是异常样本）
+                    zero_mask = Image.new('L', (w, h), 0)
+                    mask_name = f.stem + '_mask' + f.suffix
+                    zero_mask.save(mask_dst / mask_name)
+                except Exception:
+                    pass
 
 
 def cleanup_train_bad(exp_dir):
@@ -426,6 +444,9 @@ def run_single_eval(exp_dir, model_name='patchcore', seed=42, device='auto'):
     if merged_for_supervised:
         merge_synthetic_to_train_bad(exp_dir)
 
+    # efficient_ad 要求 batch_size=1
+    batch_size = 1 if model_name == 'efficient_ad' else 32
+
     torch.manual_seed(seed)
     torch.cuda.is_available()  # 触发 CUDA 初始化，提前捕获兼容性问题
     all_metrics = {}
@@ -464,8 +485,8 @@ def run_single_eval(exp_dir, model_name='patchcore', seed=42, device='auto'):
             datamodule = MVTecAD(
                 root=exp_dir,
                 category=cls,
-                train_batch_size=32,
-                eval_batch_size=32,
+                train_batch_size=batch_size,
+                eval_batch_size=batch_size,
                 num_workers=0,
                 seed=seed,
             )
@@ -534,34 +555,43 @@ def _load_wide_resnet_backbone():
 
 def _create_model(model_name):
     """根据名称创建 anomalib 模型。"""
+    model = None
     if model_name == 'patchcore':
         from anomalib.models import Patchcore
         backbone = _load_wide_resnet_backbone()
-        # Patchcore(backbone=...)  — check if signature accepts Module
         import inspect
         sig = inspect.signature(Patchcore.__init__)
         if 'backbone' in sig.parameters:
-            return Patchcore(backbone=backbone)
-        return Patchcore()
+            model = Patchcore(backbone=backbone)
+        else:
+            model = Patchcore()
     elif model_name == 'efficient_ad':
         from anomalib.models import EfficientAd
-        return EfficientAd()
+        model = EfficientAd()
     elif model_name == 'draem':
         from anomalib.models import Draem
-        return Draem()
+        model = Draem()
     elif model_name == 'cflow':
         from anomalib.models import Cflow
-        return Cflow()
+        model = Cflow()
     elif model_name == 'fastflow':
         from anomalib.models import Fastflow
-        return Fastflow()
+        model = Fastflow()
     elif model_name == 'reverse_distillation':
         from anomalib.models import ReverseDistillation
-        return ReverseDistillation()
+        model = ReverseDistillation()
     else:
         raise ValueError(f"Unknown model: {model_name}. "
                          "Available: patchcore, efficient_ad, draem, cflow, fastflow, "
                          "reverse_distillation")
+
+    # Add pixel_AUPRO to evaluator (not included by default in anomalib)
+    from anomalib.metrics import AUPRO
+    model.evaluator.test_metrics.append(
+        AUPRO(fields=["anomaly_map", "gt_mask"], prefix="pixel_")
+    )
+
+    return model
 
 
 def compute_summary(metrics_dict):

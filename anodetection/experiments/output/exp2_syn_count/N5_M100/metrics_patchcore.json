@@ -1,0 +1,114 @@
+{
+  "mean_image_AUROC": 0.9024638930956522,
+  "mean_pixel_AUROC": 0.9545629700024922,
+  "mean_pixel_AUPRO": 0.8579482078552246,
+  "mean_image_F1": 0.935079554716746,
+  "mean_pixel_F1": 0.5336740603049596,
+  "per_class": {
+    "bottle": {
+      "image_AUROC": 1.0,
+      "image_F1Score": 0.9919999837875366,
+      "pixel_AUROC": 0.9870954751968384,
+      "pixel_F1Score": 0.7494279742240906,
+      "pixel_AUPRO": 0.9448044896125793
+    },
+    "cable": {
+      "image_AUROC": 0.8843703269958496,
+      "image_F1Score": 0.8421052694320679,
+      "pixel_AUROC": 0.9786205291748047,
+      "pixel_F1Score": 0.587547242641449,
+      "pixel_AUPRO": 0.8996977210044861
+    },
+    "capsule": {
+      "image_AUROC": 0.8137215971946716,
+      "image_F1Score": 0.9344978332519531,
+      "pixel_AUROC": 0.9844326376914978,
+      "pixel_F1Score": 0.47832608222961426,
+      "pixel_AUPRO": 0.8953364491462708
+    },
+    "carpet": {
+      "image_AUROC": 0.985954999923706,
+      "image_F1Score": 0.966292142868042,
+      "pixel_AUROC": 0.9904656410217285,
+      "pixel_F1Score": 0.6278420090675354,
+      "pixel_AUPRO": 0.9501101970672607
+    },
+    "grid": {
+      "image_AUROC": 0.6198830604553223,
+      "image_F1Score": 0.8682170510292053,
+      "pixel_AUROC": 0.7093989849090576,
+      "pixel_F1Score": 0.03195388615131378,
+      "pixel_AUPRO": 0.30123376846313477
+    },
+    "hazelnut": {
+      "image_AUROC": 0.9853571057319641,
+      "image_F1Score": 0.9503546357154846,
+      "pixel_AUROC": 0.9744739532470703,
+      "pixel_F1Score": 0.5019809007644653,
+      "pixel_AUPRO": 0.9119371175765991
+    },
+    "leather": {
+      "image_AUROC": 1.0,
+      "image_F1Score": 0.994535505771637,
+      "pixel_AUROC": 0.9930636882781982,
+      "pixel_F1Score": 0.48940667510032654,
+      "pixel_AUPRO": 0.9717368483543396
+    },
+    "metal_nut": {
+      "image_AUROC": 0.9701857566833496,
+      "image_F1Score": 0.950276255607605,
+      "pixel_AUROC": 0.9847216606140137,
+      "pixel_F1Score": 0.8407695293426514,
+      "pixel_AUPRO": 0.9162264466285706
+    },
+    "pill": {
+      "image_AUROC": 0.8941625356674194,
+      "image_F1Score": 0.9399293065071106,
+      "pixel_AUROC": 0.9694240093231201,
+      "pixel_F1Score": 0.694058895111084,
+      "pixel_AUPRO": 0.9229727387428284
+    },
+    "screw": {
+      "image_AUROC": 0.5584136247634888,
+      "image_F1Score": 0.8489208817481995,
+      "pixel_AUROC": 0.916289210319519,
+      "pixel_F1Score": 0.040871113538742065,
+      "pixel_AUPRO": 0.6967105865478516
+    },
+    "tile": {
+      "image_AUROC": 0.9992785453796387,
+      "image_F1Score": 0.9879518151283264,
+      "pixel_AUROC": 0.9614086151123047,
+      "pixel_F1Score": 0.6425238847732544,
+      "pixel_AUPRO": 0.8635246157646179
+    },
+    "toothbrush": {
+      "image_AUROC": 0.9027777314186096,
+      "image_F1Score": 0.8852459192276001,
+      "pixel_AUROC": 0.9892004132270813,
+      "pixel_F1Score": 0.6345475912094116,
+      "pixel_AUPRO": 0.8641024827957153
+    },
+    "transistor": {
+      "image_AUROC": 0.9770833849906921,
+      "image_F1Score": 0.9487179517745972,
+      "pixel_AUROC": 0.9612805843353271,
+      "pixel_F1Score": 0.5938019752502441,
+      "pixel_AUPRO": 0.9225354194641113
+    },
+    "wood": {
+      "image_AUROC": 0.9780701398849487,
+      "image_F1Score": 0.942148745059967,
+      "pixel_AUROC": 0.936193585395813,
+      "pixel_F1Score": 0.49931445717811584,
+      "pixel_AUPRO": 0.8712228536605835
+    },
+    "zipper": {
+      "image_AUROC": 0.9676995873451233,
+      "image_F1Score": 0.9750000238418579,
+      "pixel_AUROC": 0.9823755621910095,
+      "pixel_F1Score": 0.592738687992096,
+      "pixel_AUPRO": 0.9370713829994202
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "mean_image_AUROC": 0.8375468254089355,
+  "mean_pixel_AUROC": 0.9292532503604889,
+  "mean_pixel_AUPRO": 0.8039545975625515,
+  "mean_image_F1": 0.9069760590791702,
+  "mean_pixel_F1": 0.47318860748782754,
+  "per_class": {
+    "bottle": {
+      "image_AUROC": 0.9952381253242493,
+      "image_F1Score": 0.9841269850730896,
+      "pixel_AUROC": 0.986095666885376,
+      "pixel_F1Score": 0.7345946431159973,
+      "pixel_AUPRO": 0.9489867687225342
+    },
+    "cable": {
+      "image_AUROC": 0.7987256050109863,
+      "image_F1Score": 0.784140944480896,
+      "pixel_AUROC": 0.9587122201919556,
+      "pixel_F1Score": 0.549778401851654,
+      "pixel_AUPRO": 0.8330707550048828
+    },
+    "capsule": {
+      "image_AUROC": 0.6473873257637024,
+      "image_F1Score": 0.9170305728912354,
+      "pixel_AUROC": 0.9740089178085327,
+      "pixel_F1Score": 0.3218214511871338,
+      "pixel_AUPRO": 0.8525342345237732
+    },
+    "carpet": {
+      "image_AUROC": 0.9875601530075073,
+      "image_F1Score": 0.966292142868042,
+      "pixel_AUROC": 0.9904360771179199,
+      "pixel_F1Score": 0.6335405707359314,
+      "pixel_AUPRO": 0.947730302810669
+    },
+    "grid": {
+      "image_AUROC": 0.604427695274353,
+      "image_F1Score": 0.8549618124961853,
+      "pixel_AUROC": 0.6331886649131775,
+      "pixel_F1Score": 0.03812708333134651,
+      "pixel_AUPRO": 0.2634830176830292
+    },
+    "hazelnut": {
+      "image_AUROC": 0.8424999713897705,
+      "image_F1Score": 0.8447204828262329,
+      "pixel_AUROC": 0.9555038809776306,
+      "pixel_F1Score": 0.3587070107460022,
+      "pixel_AUPRO": 0.8682754039764404
+    },
+    "leather": {
+      "image_AUROC": 1.0,
+      "image_F1Score": 0.994535505771637,
+      "pixel_AUROC": 0.9930782318115234,
+      "pixel_F1Score": 0.48704764246940613,
+      "pixel_AUPRO": 0.9731503129005432
+    },
+    "metal_nut": {
+      "image_AUROC": 0.8245357275009155,
+      "image_F1Score": 0.9100000262260437,
+      "pixel_AUROC": 0.9430023431777954,
+      "pixel_F1Score": 0.6618920564651489,
+      "pixel_AUPRO": 0.74440598487854
+    },
+    "pill": {
+      "image_AUROC": null,
+      "error": "[Errno 2] No such file or directory: 'D:\\\\desktop\\\\DefectDiffu-main\\\\anodetection\\\\experiments\\\\output\\\\exp1_fewshot\\\\N2_real_only\\\\pill/test/contamination/003.png'"
+    },
+    "screw": {
+      "image_AUROC": null,
+      "error": "HTTP Error 404: "
+    }
+  }
+}

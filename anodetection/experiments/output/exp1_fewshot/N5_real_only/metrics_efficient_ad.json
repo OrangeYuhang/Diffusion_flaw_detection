@@ -1,99 +1,114 @@
 {
-  "mean_image_AUROC": 0.6595051815112432,
-  "mean_pixel_AUROC": 0.6818312525749206,
-  "mean_pixel_AUPRO": null,
-  "mean_image_F1": 0.8726870775222778,
-  "mean_pixel_F1": 0.21197538025056323,
+  "mean_image_AUROC": 0.6481387406587601,
+  "mean_pixel_AUROC": 0.6644620498021444,
+  "mean_pixel_AUPRO": 0.312544380625089,
+  "mean_image_F1": 0.8727347731590271,
+  "mean_pixel_F1": 0.1954030944655339,
   "per_class": {
     "bottle": {
-      "image_AUROC": 0.3968254029750824,
+      "image_AUROC": 0.4380952715873718,
       "image_F1Score": 0.8551723957061768,
-      "pixel_AUROC": 0.5260170698165894,
-      "pixel_F1Score": 0.13767804205417633
+      "pixel_AUROC": 0.5271788239479065,
+      "pixel_F1Score": 0.13767819106578827,
+      "pixel_AUPRO": 0.10306763648986816
     },
     "cable": {
-      "image_AUROC": 0.5097451210021973,
+      "image_AUROC": 0.4977511167526245,
       "image_F1Score": 0.7551867365837097,
-      "pixel_AUROC": 0.6762629747390747,
-      "pixel_F1Score": 0.10053291916847229
+      "pixel_AUROC": 0.6689236760139465,
+      "pixel_F1Score": 0.09956519305706024,
+      "pixel_AUPRO": 0.13468565046787262
     },
     "capsule": {
-      "image_AUROC": 0.2381332367658615,
+      "image_AUROC": 0.23972876369953156,
       "image_F1Score": 0.8999999761581421,
-      "pixel_AUROC": 0.7465547323226929,
-      "pixel_F1Score": 0.05247374251484871
+      "pixel_AUROC": 0.7087610363960266,
+      "pixel_F1Score": 0.045897599309682846,
+      "pixel_AUPRO": 0.2232695072889328
     },
     "carpet": {
-      "image_AUROC": 0.9979935884475708,
-      "image_F1Score": 0.9830508232116699,
-      "pixel_AUROC": 0.9679597616195679,
-      "pixel_F1Score": 0.7217984795570374
+      "image_AUROC": 0.9975923299789429,
+      "image_F1Score": 0.9828571677207947,
+      "pixel_AUROC": 0.9676312804222107,
+      "pixel_F1Score": 0.7195940613746643,
+      "pixel_AUPRO": 0.9348202347755432
     },
     "grid": {
-      "image_AUROC": 0.8137009143829346,
-      "image_F1Score": 0.868852436542511,
-      "pixel_AUROC": 0.7433391809463501,
-      "pixel_F1Score": 0.06342776864767075
+      "image_AUROC": 0.7318295836448669,
+      "image_F1Score": 0.8527131676673889,
+      "pixel_AUROC": 0.7159401178359985,
+      "pixel_F1Score": 0.05593758448958397,
+      "pixel_AUPRO": 0.3818463683128357
     },
     "hazelnut": {
-      "image_AUROC": 0.959642767906189,
-      "image_F1Score": 0.9295774698257446,
-      "pixel_AUROC": 0.5555249452590942,
-      "pixel_F1Score": 0.16787798702716827
+      "image_AUROC": 0.9939286112785339,
+      "image_F1Score": 0.9650349617004395,
+      "pixel_AUROC": 0.5200167894363403,
+      "pixel_F1Score": 0.08543802797794342,
+      "pixel_AUPRO": 0.09976367652416229
     },
     "leather": {
-      "image_AUROC": 0.9412364363670349,
-      "image_F1Score": 0.9222221970558167,
-      "pixel_AUROC": 0.9168694615364075,
-      "pixel_F1Score": 0.2933274507522583
+      "image_AUROC": 0.94089674949646,
+      "image_F1Score": 0.9273743033409119,
+      "pixel_AUROC": 0.9175397157669067,
+      "pixel_F1Score": 0.29406413435935974,
+      "pixel_AUPRO": 0.8048954010009766
     },
     "metal_nut": {
-      "image_AUROC": 0.25855326652526855,
+      "image_AUROC": 0.29227763414382935,
       "image_F1Score": 0.8888888955116272,
-      "pixel_AUROC": 0.5000466704368591,
-      "pixel_F1Score": 0.26066482067108154
+      "pixel_AUROC": 0.4983600080013275,
+      "pixel_F1Score": 0.26066672801971436,
+      "pixel_AUPRO": 0.005938996560871601
     },
     "pill": {
-      "image_AUROC": 0.7373158931732178,
-      "image_F1Score": 0.9240924119949341,
-      "pixel_AUROC": 0.7071035504341125,
-      "pixel_F1Score": 0.16725140810012817
+      "image_AUROC": 0.6533006429672241,
+      "image_F1Score": 0.9120520949363708,
+      "pixel_AUROC": 0.6226595640182495,
+      "pixel_F1Score": 0.13442355394363403,
+      "pixel_AUPRO": 0.2840981185436249
     },
     "screw": {
-      "image_AUROC": 1.0,
+      "image_AUROC": 0.9999999403953552,
       "image_F1Score": 0.9957805871963501,
-      "pixel_AUROC": 0.3960651755332947,
-      "pixel_F1Score": 0.006497118156403303
+      "pixel_AUROC": 0.3843967914581299,
+      "pixel_F1Score": 0.006454436108469963,
+      "pixel_AUPRO": 0.004833209328353405
     },
     "tile": {
-      "image_AUROC": 0.899350643157959,
-      "image_F1Score": 0.8864864706993103,
-      "pixel_AUROC": 0.8049860596656799,
-      "pixel_F1Score": 0.5362972021102905
+      "image_AUROC": 0.9065656661987305,
+      "image_F1Score": 0.8876404762268066,
+      "pixel_AUROC": 0.8280236124992371,
+      "pixel_F1Score": 0.5411346554756165,
+      "pixel_AUPRO": 0.6624364852905273
     },
     "toothbrush": {
-      "image_AUROC": 0.3638888895511627,
+      "image_AUROC": 0.36388885974884033,
       "image_F1Score": 0.8169013857841492,
-      "pixel_AUROC": 0.4993106722831726,
-      "pixel_F1Score": 0.08571754395961761
+      "pixel_AUROC": 0.4456295073032379,
+      "pixel_F1Score": 0.06978776305913925,
+      "pixel_AUPRO": 0.07054675370454788
     },
     "transistor": {
-      "image_AUROC": 0.3293749988079071,
+      "image_AUROC": 0.3491666615009308,
       "image_F1Score": 0.5611510872840881,
-      "pixel_AUROC": 0.6475802659988403,
-      "pixel_F1Score": 0.12379854917526245
+      "pixel_AUROC": 0.6478406190872192,
+      "pixel_F1Score": 0.12415198981761932,
+      "pixel_AUPRO": 0.176012322306633
     },
     "wood": {
-      "image_AUROC": 0.8929824829101562,
-      "image_F1Score": 0.9256198406219482,
-      "pixel_AUROC": 0.7459737062454224,
-      "pixel_F1Score": 0.34245744347572327
+      "image_AUROC": 0.7535088062286377,
+      "image_F1Score": 0.9105691313743591,
+      "pixel_AUROC": 0.720802903175354,
+      "pixel_F1Score": 0.23750795423984528,
+      "pixel_AUPRO": 0.3907782733440399
     },
     "zipper": {
-      "image_AUROC": 0.553834080696106,
-      "image_F1Score": 0.8773234486579895,
-      "pixel_AUROC": 0.7938745617866516,
-      "pixel_F1Score": 0.11983022838830948
+      "image_AUROC": 0.5635504722595215,
+      "image_F1Score": 0.8796992301940918,
+      "pixel_AUROC": 0.7932263016700745,
+      "pixel_F1Score": 0.11874454468488693,
+      "pixel_AUPRO": 0.4111730754375458
     }
   }
 }

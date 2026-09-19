@@ -18,12 +18,51 @@ from diffusers.models import AutoencoderKL
 import clip.clip as clip
 
 
+def rgb_to_gray(tensor):
+    """Convert RGB tensor (B, C, H, W) to grayscale."""
+    r, g, b = tensor[:, 0], tensor[:, 1], tensor[:, 2]
+    gray = 0.299 * r + 0.587 * g + 0.114 * b
+    return gray
+
+
+def iterative_thresholding_batch(gray_tensor):
+    """Iterative thresholding for mask binarization (Otsu-like method)."""
+    gray_np = gray_tensor.detach().cpu().numpy()
+    binarized = np.zeros_like(gray_np, dtype=np.uint8)
+
+    for i in range(gray_np.shape[0]):
+        img = gray_np[i]
+        T = img.mean()
+        prev_T = -1
+
+        while abs(T - prev_T) > 1e-4:
+            prev_T = T
+            G1 = img[img >= T]
+            G2 = img[img < T]
+            m1 = G1.mean() if G1.size > 0 else 0
+            m2 = G2.mean() if G2.size > 0 else 0
+            T = (m1 + m2) / 2
+
+        binarized[i] = (img >= T).astype(np.uint8)
+
+    return torch.from_numpy(binarized).float().to(gray_tensor.device)
+
+
+def binarize_mask(mask_tensor):
+    """Convert continuous VAE-decoded mask to binary mask."""
+    gray = rgb_to_gray(mask_tensor)
+    binary = iterative_thresholding_batch(gray)
+    # Scale to 0-1 and expand to 3-channel for save_image
+    binary = (binary * 255).to(torch.uint8).float() / 255.0
+    return binary.unsqueeze(1)
+
+
 def load_models(ckpt_path, vae_path, device, image_size=256):
     latent_size = image_size // 8
     model = DiT(depth=28, hidden_size=1152, patch_size=2, num_heads=16,
                 input_size=latent_size, num_classes=1000).to(device)
     state_dict = torch.load(ckpt_path, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    model.load_state_dict(state_dict)
     model.eval()
     model = model.float()
 
@@ -117,7 +156,8 @@ def main():
                                  latent_size, float(cfg), 1.0, device)
         save_image(img, os.path.join(args.out_dir,
                      f"{args.product}_{args.defect}_cfg{cfg:.1f}.png"), normalize=True)
-        save_image(mask, os.path.join(args.out_dir,
+        mask_bin = binarize_mask(mask)
+        save_image(mask_bin, os.path.join(args.out_dir,
                      f"{args.product}_{args.defect}_cfg{cfg:.1f}_mask.png"), normalize=True)
         print(f"  cfg={cfg:.1f} saved")
 
@@ -132,7 +172,8 @@ def main():
                                  latent_size, 2.0, float(ns), device)
         save_image(img, os.path.join(args.out_dir,
                      f"{args.product}_{args.defect}_ns{ns:.2f}.png"), normalize=True)
-        save_image(mask, os.path.join(args.out_dir,
+        mask_bin = binarize_mask(mask)
+        save_image(mask_bin, os.path.join(args.out_dir,
                      f"{args.product}_{args.defect}_ns{ns:.2f}_mask.png"), normalize=True)
         print(f"  noise_scale={ns:.2f} saved")
 
@@ -148,7 +189,8 @@ def main():
                                  latent_size, 2.0, 1.0, device)
         save_image(img, os.path.join(args.out_dir,
                      f"{args.product}_{args.defect}_seed{seed_i}.png"), normalize=True)
-        save_image(mask, os.path.join(args.out_dir,
+        mask_bin = binarize_mask(mask)
+        save_image(mask_bin, os.path.join(args.out_dir,
                      f"{args.product}_{args.defect}_seed{seed_i}_mask.png"), normalize=True)
         print(f"  seed={seed_i} saved")
 
@@ -167,7 +209,8 @@ def main():
             save_image(img, os.path.join(args.out_dir,
                          f"{args.product}_{args.defect}_grid_c{cfg:.1f}_n{ns:.2f}.png"),
                        normalize=True)
-            save_image(mask, os.path.join(args.out_dir,
+            mask_bin = binarize_mask(mask)
+            save_image(mask_bin, os.path.join(args.out_dir,
                          f"{args.product}_{args.defect}_grid_c{cfg:.1f}_n{ns:.2f}_mask.png"),
                        normalize=True)
     print(f"Grid sweep done.")

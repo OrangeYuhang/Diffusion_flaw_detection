@@ -74,7 +74,7 @@ def gen(args):
     diffusion = create_diffusion(timestep_respacing="50")
     vae = AutoencoderKL.from_pretrained(args.vae).to(device)
     state_dict = torch.load(args.ckpt)
-    model.load_state_dict(state_dict['model_state_dict'])
+    model.load_state_dict(state_dict)
     num_img = args.batchsize
     while True:
         for c in label_list:

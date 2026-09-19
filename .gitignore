@@ -32,3 +32,8 @@ experiments/output/
 # IDE
 .idea/
 .vscode/
+
+#other
+AGENTS.md
+CLAUDE.md
+

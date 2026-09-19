@@ -17,6 +17,7 @@ import json
 import shutil
 import subprocess
 import argparse
+import time
 import numpy as np
 from collections import defaultdict
 
@@ -33,15 +34,15 @@ import clip.clip as clip
 #  Generation utilities (reused from test_gen.py)
 # ============================================================
 
-def load_models(ckpt_path, vae_path, device, image_size=256):
+def load_models(ckpt_path, vae_path, device, image_size=256, steps=25):
     latent_size = image_size // 8
     model = DiT(depth=28, hidden_size=1152, patch_size=2, num_heads=16,
                 input_size=latent_size, num_classes=1000).to(device)
     state_dict = torch.load(ckpt_path, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    model.load_state_dict(state_dict)
     model.eval()
     model = model.float()
-    diffusion = create_diffusion(timestep_respacing="50")
+    diffusion = create_diffusion(timestep_respacing=str(steps))
     vae = AutoencoderKL.from_pretrained(vae_path).to(device)
     model_clip, _ = clip.load('RN50', device)
     return model, diffusion, vae, model_clip
@@ -179,6 +180,8 @@ def main():
                         help="Total samples to generate per iteration")
     parser.add_argument("--cfg_scale", type=float, default=2.0)
     parser.add_argument("--imagesize", type=int, default=256)
+    parser.add_argument("--steps", type=int, default=25,
+                        help="DDIM sampling steps (default 25, lower = faster)")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -191,7 +194,7 @@ def main():
 
     # 加载生成模型（仅一次）
     model, diffusion, vae, model_clip = load_models(
-        args.ckpt, args.vae, device, args.imagesize)
+        args.ckpt, args.vae, device, args.imagesize, args.steps)
 
     # 从 MVTec 中发现所有 (缺陷, 产品) 对
     tasks = []
@@ -203,12 +206,23 @@ def main():
             if defect == 'good':
                 continue
             tasks.append((defect, cls))
-    print(f"Found {len(tasks)} defect types across all classes.")
 
     # 按产品类别分组任务以进行每类评估
     class_defects = defaultdict(list)
     for defect, cls in tasks:
         class_defects[cls].append(defect)
+
+    print(f"Found {len(tasks)} defect types across {len(class_defects)} classes.")
+
+    # 任务概览
+    total_defect_types = sum(len(d) for d in class_defects.values())
+    init_budget_per = args.total_budget // max(len(class_defects), 1)
+    est_imgs_per_iter = total_defect_types * max(2, init_budget_per // max(1, total_defect_types // len(class_defects)))
+    est_gen_time = est_imgs_per_iter * args.steps * 0.015
+    print(f"Classes: {len(class_defects)}  |  Defect types: {total_defect_types}")
+    print(f"Initial budget/class: {init_budget_per}  |  ~{est_imgs_per_iter} images/iter")
+    print(f"Est gen time/iter: ~{est_gen_time/60:.0f}m (with {args.steps} steps)")
+    print(f"Total iterations: {args.num_iterations}  |  Est total: ~{est_gen_time * args.num_iterations / 60:.0f}m")
 
     # 均匀初始化每类预算
     auroc_history = {}
@@ -216,8 +230,9 @@ def main():
                         for cls in class_defects}
 
     for iteration in range(1, args.num_iterations + 1):
+        iter_start = time.time()
         print(f"\n{'='*60}")
-        print(f"Iteration {iteration}/{args.num_iterations}")
+        print(f"Iteration {iteration}/{args.num_iterations}  |  Steps: {args.steps}  |  Budget: {args.total_budget}")
         print(f"{'='*60}")
 
         iter_dir = os.path.join(args.work_dir, f"iter_{iteration}")
@@ -227,17 +242,29 @@ def main():
         gt_dir = os.path.join(iter_dir, 'ground_truth')
 
         # 从原始数据集复制 normal + test + gt
+        print("[1/3] Copying dataset structure...", end=' ', flush=True)
+        t0 = time.time()
         for d in [iter_dir, bad_dir, good_dir]:
             os.makedirs(d, exist_ok=True)
-
         _copy_dataset_structure(args.data, iter_dir)
+        print(f"done ({time.time()-t0:.1f}s)")
 
-        # 按每类预算生成合成缺陷样本
+        # 预计算总生成量用于进度显示
+        total_to_gen = sum(
+            max(2, per_class_budget.get(cls, 20) // len(defects)) * len(defects)
+            for cls, defects in class_defects.items()
+        )
+        print(f"[2/3] Generating {total_to_gen} images across {len(tasks)} defect types...")
+        print(f"      Estimated: ~{total_to_gen * args.steps * 0.015:.0f}s with {args.steps} steps")
         total_generated = 0
-        for cls, defects in class_defects.items():
+        gen_start = time.time()
+
+        for cls_idx, (cls, defects) in enumerate(sorted(class_defects.items())):
             budget = per_class_budget.get(cls, 20)
             n_per_defect = max(2, budget // len(defects))
-            for defect in defects:
+            cls_start = time.time()
+            cls_gen = 0
+            for defect in sorted(defects):
                 for idx in range(n_per_defect):
                     try:
                         seed_i = args.seed * 1000 + iteration * 100 + idx
@@ -248,23 +275,43 @@ def main():
                         save_name = f"{cls}_{defect}_iter{iteration}_{idx:03d}.png"
                         save_image(img, os.path.join(bad_dir, save_name), normalize=True)
                         total_generated += 1
+                        cls_gen += 1
                     except Exception as e:
-                        print(f"  Gen failed {cls}/{defect}: {e}")
-        print(f"Generated {total_generated} defect images in iteration {iteration}.")
+                        print(f"\n  Gen failed {cls}/{defect}: {e}")
+
+            cls_elapsed = time.time() - cls_start
+            total_elapsed = time.time() - gen_start
+            pct = total_generated / total_to_gen * 100
+            eta = total_elapsed / total_generated * (total_to_gen - total_generated) if total_generated > 0 else 0
+            print(f"  [{cls_idx+1:2d}/{len(class_defects)}] {cls:15s}: {cls_gen:3d} imgs "
+                  f"({cls_elapsed:4.1f}s)  |  {total_generated:4d}/{total_to_gen} ({pct:3.0f}%)  "
+                  f"ETA: {eta/60:.0f}m{eta%60:.0f}s")
+
+        gen_time = time.time() - gen_start
+        print(f"  Total generation: {total_generated} images in {gen_time/60:.1f}m "
+              f"({gen_time/total_generated:.1f}s/img)")
 
         # 运行 PatchCore 评估
-        print("Running PatchCore evaluation...")
+        print(f"[3/3] Running PatchCore evaluation on {len(class_defects)} classes...")
+        eval_start = time.time()
         auroc = run_patchcore_eval(
             args.anomalib_root or '.', iter_dir,
             os.path.join(args.work_dir, f"eval_{iteration}"))
+        eval_time = time.time() - eval_start
         auroc_history[iteration] = auroc
-        print(f"Per-class AUROC: {json.dumps(auroc, indent=2)}")
+        print(f"  Evaluation done ({eval_time/60:.1f}m)")
+        print(f"  Per-class AUROC: {json.dumps(auroc, indent=2)}")
+
+        # 迭代总结
+        iter_time = time.time() - iter_start
+        print(f"\n  Iteration {iteration} complete in {iter_time/60:.1f}m "
+              f"(gen: {gen_time/60:.1f}m, eval: {eval_time/60:.1f}m)")
 
         # 下一轮的自适应预算分配
         if iteration < args.num_iterations:
             per_class_budget = allocate_budget(
                 auroc, args.total_budget, min_per_class=10)
-            print(f"Next iteration budget: {json.dumps(per_class_budget, indent=2)}")
+            print(f"  Next budget: {json.dumps(per_class_budget, indent=2)}")
 
     # 保存历史记录
     with open(os.path.join(args.work_dir, 'auroc_history.json'), 'w') as f:

@@ -32,7 +32,7 @@ def generate_from_text(
     model = DiT(depth=28, hidden_size=1152, patch_size=2, num_heads=16,
                 input_size=latent_size, num_classes=1000).to(device)
     state_dict = torch.load(ckpt_path, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    model.load_state_dict(state_dict)
     model =model.float()
     model.eval()
 

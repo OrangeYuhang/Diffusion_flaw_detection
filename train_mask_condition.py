@@ -3,6 +3,7 @@ DiTMaskConditioned 训练脚本。
 通过 ground truth 掩码作为 mask_cond 训练，使模型学会在指定位置生成缺陷。
 与 train.py 复用相同的 fg/bg 分离损失、Dice mask loss、正常样本训练、特征空间一致性损失。
 """
+
 import os
 import torch
 torch.backends.cuda.matmul.allow_tf32 = True

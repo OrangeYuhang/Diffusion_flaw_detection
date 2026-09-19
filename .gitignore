@@ -36,4 +36,5 @@ experiments/output/
 #other
 AGENTS.md
 CLAUDE.md
+.gitignore
 

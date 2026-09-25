@@ -37,4 +37,7 @@ experiments/output/
 AGENTS.md
 CLAUDE.md
 .gitignore
+video/
+pptxs/
+docs/
 

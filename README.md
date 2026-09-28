@@ -1,6 +1,8 @@
 # 扩散缺陷检测
 
-开始之前，请在huggingface上下载DiT256的参数放在/DiT-256下，以及VAE参数和配置放在/VAE下
+开始之前，请在huggingface上下载DiT256的参数放在/DiT-256下，以及VAE参数和配置放在/VAE下，
+
+[数据集下载](https://www.mvtec.com/research-teaching/datasets/mvtec-ad/downloads)，下载完毕后放在/data下
 
 ## 快速开始
 请查看`.cmd`

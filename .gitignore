@@ -1,12 +1,15 @@
 # 数据集
-data/
-anodetection/data/
+/data/
+anodetection/data/*
+!anodetection/data/.gitkeep
 
 # 模型权重 & 检查点
-checkpoint/
+checkpoint/*
+!checkpoint/.gitkeep
 model_para/
 VAE/
-DiT-256/
+DiT-256/*
+!DiT-256/.gitkeep
 *.pth
 *.pt
 *.safetensors
